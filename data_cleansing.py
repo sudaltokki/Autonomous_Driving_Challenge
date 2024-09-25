@@ -15,7 +15,6 @@ for subfolder in os.listdir(base_folder):
             os.makedirs(cleansing_path)
             print('makedir ', cleansing_path)
 
-
         classes = ['car', 'bus']
         locations = ['vehlane', 'outgolane', 'incomlane', 'jun', 'parking']
         statuses = ['broke', 'incotlft', 'incotrht', 'hozlit']

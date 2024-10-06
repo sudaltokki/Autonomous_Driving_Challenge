@@ -2,7 +2,8 @@ import cv2
 import os
 import numpy
 
-base_folder = r"C:\Users\YERIM\Source\autonomous challenge\data\train"
+base_folder = "Compete_Dataset_Refined\\train\\OiSam03_Day"
+
 
 for subfolder in os.listdir(base_folder):
     sub_path = os.path.join(base_folder, subfolder)

@@ -8,8 +8,8 @@ from pathlib import Path
 #################################################################
 # PARAMETERS
 model = ultralytics.YOLO('./baseline_code/runs/nonE2E_Data/weights/best.pt').cuda()
-image_directory = './data_new/images/val'
-label_directory = './data_new/labels/val'
+image_directory = './data_new/images/train'
+label_directory = './data_new/labels/train'
 output_directory = './'
 imgsz=[480,1280]
 log_step=100
@@ -60,28 +60,31 @@ def load_images(image_folder, image_filename):
 def polygons_to_mask(polygons, size):
     masks = []
     for polygon in polygons:
+        if(len(polygon) == 0):
+            continue
+
         mask = np.zeros(size, dtype=np.uint8)
         contour = np.array(polygon).reshape((-1, 1, 2))
         
         contour *= [size[1], size[0]]
         contour = contour.astype(np.int32)
-
-        if(contour.size > 0):
-            cv2.fillPoly(mask, [contour], 1)
         
+        cv2.fillPoly(mask, [contour], 1)
         masks.append(mask.astype(np.int32))
     
     nparray = np.array(masks)
-    reshaped = nparray.reshape(nparray.shape[0], -1)
+    reshaped =  nparray.reshape(nparray.shape[0], -1) if nparray.size > 0 else np.array([])
+
     return torch.tensor(reshaped)
 #################################################################
 def compute_iou(gt_polygons, pred_polygons):
-    iou_matrix = np.zeros((len(gt_polygons), len(pred_polygons)))
+    iou_matrix = torch.zeros((len(gt_polygons), len(pred_polygons)))
     
     gt_masks = polygons_to_mask(gt_polygons, imgsz)
     pred_masks = polygons_to_mask(pred_polygons, imgsz)
 
-    iou_matrix = ultralytics.utils.metrics.mask_iou(gt_masks, pred_masks)  # Compute IoU
+    if(gt_masks.numel() > 0 and pred_masks.numel() > 0):
+        iou_matrix = ultralytics.utils.metrics.mask_iou(gt_masks, pred_masks)  # Compute IoU
 
     return iou_matrix
 #################################################################
@@ -159,9 +162,11 @@ def evaluate_model(image_folder, label_folder, output_folder):
 
             predictions = model(image,verbose=False, imgsz=[480,1280])
 
-            predict_mask = []
-            for premask in predictions[0].masks:
-                predict_mask.append(np.array(premask.xyn).flatten()) 
+            predict_mask = []   
+
+            if(bool(predictions[0].masks)):
+                for premask in predictions[0].masks:
+                    predict_mask.append(np.array(premask.xyn).flatten()) 
             
             matches, missing_gt, missing_pred = match_objects(labels['mask'], predict_mask)
 
@@ -174,7 +179,7 @@ def evaluate_model(image_folder, label_folder, output_folder):
                 update_confusion_matrix(labels['class'][match[0]][5], predictions[0].boxes.data.cpu().numpy()[match[1],10].astype('int'), cf_haz, False)
             
             for miss in missing_pred:
-                update_confusion_matrix(-1, predictions[0].boxes.data.cpu().numpy()[match[1],5].astype('int'), cf_cls)
+                update_confusion_matrix(-1, predictions[0].boxes.data.cpu().numpy()[miss,5].astype('int'), cf_cls)
 
             for miss in missing_gt:
                 update_confusion_matrix(labels['class'][miss][0], -1, cf_cls)

@@ -112,6 +112,7 @@ def update_confusion_matrix(ground_truth, predicted, confusion_matrix, exclusive
     if(exclusive):
         if(ground_truth == predicted):
             confusion_matrix[int(ground_truth)][0]+=1
+            return
 
         else:
             if(ground_truth >= 0):
@@ -126,11 +127,12 @@ def update_confusion_matrix(ground_truth, predicted, confusion_matrix, exclusive
         
         elif(ground_truth == predicted):
             confusion_matrix[0][0]+=1
+            return
         
-        elif(ground_truth >= 0):
+        if(ground_truth > 0):
             confusion_matrix[0][1]+=1
         
-        elif (predicted >= 0):
+        if (predicted > 0):
             confusion_matrix[0][2]+=1 
 #################################################################
 def confusion_to_array(confusion_matrix, total):
